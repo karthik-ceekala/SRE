@@ -1,0 +1,52 @@
+- Launch Azure Data Studio and connect to SQL Server instance.
+- Open the "Extensions" view by selecting "Extensions" from the left-hand menu.
+- Install the "SQL Server Agent" extension if it is not already installed.
+- Open the "SQL Server Agent" view by selecting "SQL Server Agent" from the left-hand menu.
+- Click the "Jobs" tab and then click the "New Job" button to create a new job.
+- In the "New Job" window, enter job name and description.
+- Click the "Steps" tab and then click the "New" button to create a new step.
+- In the "New Job Step" window, enter step name and description.
+- Select "Transact-SQL script (T-SQL)" as the type of command.
+- Enter a T-SQL script that selects slow running queries from the SQL Server system tables. Following is an example
+  SELECT
+    DB_NAME(st.dbid) AS database_name,
+    OBJECT_SCHEMA_NAME(st.objectid, st.dbid) AS schema_name,
+    OBJECT_NAME(st.objectid, st.dbid) AS object_name,
+    st.query_duration / 1000.0 AS duration_seconds,
+    st.last_execution_time AS last_execution_time,
+    st.text AS query_text
+  FROM
+    sys.dm_exec_query_stats st
+    CROSS APPLY sys.dm_exec_sql_text(st.sql_handle) AS qt
+  WHERE
+    st.last_execution_time > DATEADD(MINUTE, -5, GETDATE())
+    AND st.query_duration > 5000 
+  ORDER BY
+    st.last_execution_time DESC;
+ 
+- Click the "Advanced" tab and then set the following options:
+    Set the "Output file" option to "None".
+    Set the "On success action" option to "Quit the job reporting success".
+    Set the "On failure action" option to "Quit the job reporting failure".
+- Click "OK" to save the job step.
+- Click the "Schedules" tab and then click the "New" button to create a new schedule.
+- In the "New Schedule" window, enter schedule name and description.
+- Set the schedule to run as frequently as desired.
+- Click "OK" to save the schedule.
+- Click the "Notifications" tab and then click the "New" button to create a new notification.
+- In the "New Notification" window, configure the notification settings as desired, including the email recipients and subject.
+- Click "OK" to save the notification.
+- Click the "Alerts" tab and then click the "New" button to create a new alert.
+- In the "New Alert" window, give your alert a name and a description.
+- Set the "Type" option to "SQL Server performance condition alert".
+- Click the "Performance condition" tab and then set the following options:
+    Set the "Object" option to "SQLServer:SQL Statistics".
+    Set the "Counter" option to "Batch Requests/sec".
+    Set the "Instance" option to "All".
+- Click the "Response" tab and then set the following options:
+    Set the "Execute job" option to the job you created earlier.
+    Set the "Include alert details" option to "True".
+- Click the "OK" button to save the alert.
+- Once the alert is created, it will monitor the performance condition specified in the alert settings. If the number of slow running queries hits the threshold, the alert will execute the job that you created in step 5, which will run the T-SQL script you specified in step 10.
+- The T-SQL script will generate a list of slow running queries and store them in the output file you specified in step 11. The notification that was created in step 19 will send an email to the recipients you specified in the event that the alert is triggered.
+- Job status can be monitored by navigating to the "Jobs" tab in the "SQL Server Agent" view. Output file can be viewed by right-clicking on the job and selecting "View History" from the context menu. The output file will be displayed in a new window.
